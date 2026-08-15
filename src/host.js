@@ -103,7 +103,11 @@ async function main() {
   }
   modelOrder.sort(function (a, b) { return b.cost - a.cost; });
 
-  // 4. one-line JSON out
+  // 4. cache hit rate: reads / (reads + creations); null when no cache traffic
+  var cacheTraffic = cacheRead + cacheWrite;
+  var cacheHitRate = cacheTraffic > 0 ? cacheRead / cacheTraffic : null;
+
+  // 5. one-line JSON out
   console.log(JSON.stringify({
     ok: true,
     days: days,
@@ -114,6 +118,7 @@ async function main() {
     outputTokens: outputTokens,
     cacheReadTokens: cacheRead,
     cacheCreationTokens: cacheWrite,
+    cacheHitRate: cacheHitRate,
     totalCost: totalCost,
     models: modelOrder,
     fetchedAt: new Date().toISOString()

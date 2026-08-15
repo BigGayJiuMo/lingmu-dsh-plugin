@@ -22,6 +22,10 @@ function fmtInt(n) {
 }
 function fmtUsd2(n) { return (Number(n) || 0).toFixed(2); }
 function fmtUsd4(n) { return (Number(n) || 0).toFixed(4); }
+function fmtPct(rate) {
+  if (rate === null || rate === undefined || isNaN(Number(rate))) return '—';
+  return (Number(rate) * 100).toFixed(1) + '%';
+}
 function fmtTime(iso) {
   if (!iso) return '';
   const d = new Date(iso);
@@ -145,6 +149,18 @@ function LingMuFloat() {
       });
     return function () { cancelled = true; };
   }, [days, stamp, creds]);
+
+  // Auto-load once credentials become available (first mount reads them
+  // from localStorage; if the widget opened before they existed, retry
+  // as soon as they do) and whenever the widget expands to a window.
+  const prevModeRef = React.useRef(mode);
+  React.useEffect(function () {
+    const wasBall = prevModeRef.current === 'ball';
+    prevModeRef.current = mode;
+    if (creds && wasBall && mode === 'window') {
+      setStamp(stamp + 1);
+    }
+  }, [mode, creds, stamp]);
 
   function openSettings() {
     setDraftEmail(creds ? creds.email : '');
@@ -349,6 +365,7 @@ function LingMuFloat() {
       { label: '请求次数', value: fmtInt(data.totalRequests) },
       { label: '输入Token', value: fmtInt(data.inputTokens) },
       { label: '输出Token', value: fmtInt(data.outputTokens) },
+      { label: '缓存命中率', value: fmtPct(data.cacheHitRate) },
       { label: '缓存命中', value: fmtInt(data.cacheReadTokens) },
       { label: '总费用', value: '$' + fmtUsd4(data.totalCost) }
     ];
