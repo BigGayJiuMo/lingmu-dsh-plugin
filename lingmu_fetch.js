@@ -97,7 +97,14 @@ async function main() {
   }
   modelOrder.sort(function (a, b) { return b.cost - a.cost; });
 
-  // 4. one-line JSON out
+  // 4. cache hit rate: reads / (reads + uncached input); null when no tokens
+  // at all. cache_creation_tokens is 0 on this relay, so reads/(reads+creations)
+  // would be 100% forever; inputTokens here is the uncached input, giving a
+  // meaningful hit rate (e.g. 137984 / (137984 + 157) ~= 99.9%).
+  var cacheDenominator = cacheRead + inputTokens;
+  var cacheHitRate = cacheDenominator > 0 ? cacheRead / cacheDenominator : null;
+
+  // 5. one-line JSON out
   console.log(JSON.stringify({
     ok: true,
     days: days,
@@ -108,6 +115,7 @@ async function main() {
     outputTokens: outputTokens,
     cacheReadTokens: cacheRead,
     cacheCreationTokens: cacheWrite,
+    cacheHitRate: cacheHitRate,
     totalCost: totalCost,
     models: modelOrder,
     fetchedAt: new Date().toISOString()
