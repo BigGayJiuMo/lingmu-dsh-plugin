@@ -46,13 +46,13 @@ const LM_CREDS_KEY = 'lingmu.creds.v1';
 
 const LM_CSS = `
 .lm-float{position:fixed;pointer-events:auto}
-.lm-win{width:360px;max-width:calc(100vw - 24px);border-radius:12px;border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1);box-shadow:0 8px 30px rgba(0,0,0,.28);overflow:hidden;display:flex;flex-direction:column}
+.lm-win{width:520px;max-width:calc(100vw - 24px);border-radius:12px;border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1);box-shadow:0 8px 30px rgba(0,0,0,.28);overflow:hidden;display:flex;flex-direction:column;position:relative}
 .lm-head{cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;display:flex;align-items:center;justify-content:space-between;gap:6px;padding:8px 12px;background:var(--dsw-alias-bg-layer-2);border-bottom:1px solid var(--dsw-alias-border-l1)}
 .lm-head.dragging{cursor:grabbing}
 .lm-title{font-size:13px;font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .lm-ico{width:24px;height:24px;border-radius:6px;border:1px solid var(--dsw-alias-border-l1);background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer;font-size:14px;line-height:1;display:flex;align-items:center;justify-content:center;padding:0}
 .lm-ico:hover{color:var(--dsw-alias-label-primary);border-color:var(--dsw-alias-border-l2)}
-.lm-win-body{overflow-y:auto;max-height:min(55vh,520px);padding:10px 12px;color:var(--dsw-alias-label-primary);font-size:13px;line-height:1.5}
+.lm-win-body{overflow-y:auto;max-height:min(55vh,520px);padding:10px 12px;color:var(--dsw-alias-label-primary);font-size:13px;line-height:1.5;flex:1 1 auto;min-height:0}
 .lm-row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
 .lm-tabs{display:flex;gap:6px}
 .lm-tab{padding:3px 12px;border-radius:999px;border:1px solid var(--dsw-alias-border-l1);background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer;font-size:12px}
@@ -88,17 +88,24 @@ const LM_CSS = `
 .lm-btn.danger{color:var(--dsw-alias-state-error-primary);border-color:var(--dsw-alias-state-error-primary)}
 .lm-ball{width:46px;height:46px;border-radius:50%;background:var(--dsw-alias-brand-primary);color:#fff;font-size:20px;font-weight:700;display:flex;align-items:center;justify-content:center;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;box-shadow:0 4px 16px rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.18)}
 .lm-ball.dragging{cursor:grabbing}
+.lm-resize{position:absolute;right:0;bottom:0;width:18px;height:18px;cursor:se-resize;touch-action:none;z-index:2;opacity:.55}
+.lm-resize:hover{opacity:1}
+.lm-resize::after{content:'';position:absolute;right:4px;bottom:4px;width:7px;height:7px;border-right:2px solid var(--dsw-alias-label-secondary);border-bottom:2px solid var(--dsw-alias-label-secondary);opacity:.7}
 `;
 
 // module-scope drag session + root node (single root-scoped overlay instance)
 let lmDrag = null;
 let lmRootNode = null;
+let lmResize = null;
 
 function LingMuFloat() {
   const [mode, setMode] = React.useState('window');
+  // default 520px wide; height auto (grows with content) until the user
+  // drags the resize handle, then it stays fixed
+  const [win, setWin] = React.useState({ w: 520, h: null });
   const [pos, setPos] = React.useState(function () {
     const vw = typeof window !== 'undefined' ? window.innerWidth : 1280;
-    return { x: Math.max(8, vw - 376), y: 72 };
+    return { x: Math.max(8, vw - 520 - 16), y: 72 };
   });
   const [dragging, setDragging] = React.useState(false);
   const [view, setView] = React.useState('dashboard');
@@ -203,7 +210,7 @@ function LingMuFloat() {
     // instead of leaving it at the window's old position until it is dragged.
     const vw = typeof window !== 'undefined' ? window.innerWidth : 1280;
     const vh = typeof window !== 'undefined' ? window.innerHeight : 800;
-    const cx = pos.x + 180; // window center (window is 360px wide)
+    const cx = pos.x + win.w / 2; // window center
     const ny = Math.min(Math.max(pos.y, 8), Math.max(8, vh - 46 - 8));
     setPos({ x: cx < vw / 2 ? 8 : Math.max(8, vw - 46 - 8), y: ny });
     setMode('ball');
@@ -247,7 +254,7 @@ function LingMuFloat() {
       const rect = node.getBoundingClientRect();
       setMode('window');
       setPos({
-        x: Math.min(Math.max(rect.left, 8), Math.max(8, vw - 360 - 8)),
+        x: Math.min(Math.max(rect.left, 8), Math.max(8, vw - win.w - 8)),
         y: Math.min(Math.max(rect.top, 8), Math.max(8, vh - 320 - 8))
       });
       return;
@@ -292,6 +299,40 @@ function LingMuFloat() {
     if (!d || d.id !== e.pointerId) return;
     lmDrag = null;
     setDragging(false);
+  }
+
+  // ---- window resize (bottom-right handle) ----
+  function onResizeDown(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    const t = e.currentTarget;
+    try { t.setPointerCapture(e.pointerId); } catch (err) {}
+    const node = lmRootNode;
+    const rect = node ? node.getBoundingClientRect() : null;
+    const startH = win.h !== null && win.h > 0
+      ? win.h
+      : (rect ? Math.max(rect.height, 260) : 420);
+    lmResize = {
+      id: e.pointerId,
+      startX: e.clientX,
+      startY: e.clientY,
+      startW: win.w,
+      startH: startH
+    };
+  }
+  function onResizeMove(e) {
+    const s = lmResize;
+    if (!s || s.id !== e.pointerId) return;
+    const vw = typeof window !== 'undefined' ? window.innerWidth : 1280;
+    const vh = typeof window !== 'undefined' ? window.innerHeight : 800;
+    const w = Math.min(Math.max(s.startW + (e.clientX - s.startX), 360), vw - 24);
+    const h = Math.min(Math.max(s.startH + (e.clientY - s.startY), 200), vh - 24);
+    setWin({ w: w, h: h });
+  }
+  function onResizeUp(e) {
+    const s = lmResize;
+    if (!s || s.id !== e.pointerId) return;
+    lmResize = null;
   }
 
   const head = React.createElement('div', {
@@ -439,7 +480,13 @@ function LingMuFloat() {
     disabled: loading
   }, loading ? '加载中…' : '↻ 刷新');
 
-  const content = React.createElement('div', { className: 'lm-win' },
+  const content = React.createElement('div', {
+    className: 'lm-win',
+    style: {
+      width: win.w + 'px',
+      height: win.h !== null && win.h > 0 ? win.h + 'px' : undefined
+    }
+  },
     head,
     React.createElement('div', { className: 'lm-win-body' },
       view === 'dashboard'
@@ -448,7 +495,15 @@ function LingMuFloat() {
             bodyEl
           )
         : bodyEl
-    )
+    ),
+    React.createElement('div', {
+      className: 'lm-resize',
+      title: '拖动调整窗口大小',
+      onPointerDown: onResizeDown,
+      onPointerMove: onResizeMove,
+      onPointerUp: onResizeUp,
+      onPointerCancel: onResizeUp
+    })
   );
 
   const ball = React.createElement('div', {
