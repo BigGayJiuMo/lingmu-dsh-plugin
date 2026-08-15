@@ -61,6 +61,10 @@ const LM_CSS = `
 .lm-refresh{padding:3px 10px;border-radius:8px;border:1px solid var(--dsw-alias-border-l1);background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer;font-size:12px;white-space:nowrap}
 .lm-refresh:hover{color:var(--dsw-alias-label-primary)}
 .lm-refresh:disabled{opacity:.5;cursor:default}
+.lm-custom{display:inline-flex;align-items:center;gap:4px}
+.lm-days-input{width:64px;padding:3px 6px;border-radius:8px;font-size:12px;text-align:center}
+.lm-days-input:disabled{opacity:.5}
+.lm-days-suffix{font-size:12px;color:var(--dsw-alias-label-secondary);white-space:nowrap}
 .lm-balance{display:flex;align-items:baseline;gap:10px;padding:8px 12px;border-radius:8px;background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l1);margin-bottom:8px}
 .lb-label{color:var(--dsw-alias-label-secondary);font-size:12px}
 .lb-num{font-size:20px;font-weight:700;color:var(--dsw-alias-state-success-primary);font-variant-numeric:tabular-nums}
@@ -126,6 +130,7 @@ function LingMuFloat() {
   const [draftEmail, setDraftEmail] = React.useState('');
   const [draftPassword, setDraftPassword] = React.useState('');
   const [days, setDays] = React.useState(1);
+  const [customDays, setCustomDays] = React.useState('');
   const [data, setData] = React.useState(null);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState(null);
@@ -203,6 +208,16 @@ function LingMuFloat() {
     setDraftEmail('');
     setDraftPassword('');
     setView('dashboard');
+    setStamp(stamp + 1);
+  }
+  function applyCustomDays() {
+    const n = Math.floor(Number(customDays));
+    if (!(n >= 1) || n > 365) {
+      // invalid input: fall back to the currently selected range
+      setCustomDays(String(days));
+      return;
+    }
+    setDays(n);
     setStamp(stamp + 1);
   }
   function minimizeToBall() {
@@ -474,6 +489,25 @@ function LingMuFloat() {
       }, t.label);
     })
   );
+  // custom day-range input: type a number of days and press Enter or blur
+  const customEl = React.createElement('span', { className: 'lm-custom' },
+    React.createElement('input', {
+      className: 'lm-input lm-days-input',
+      type: 'number',
+      min: 1,
+      max: 365,
+      value: customDays,
+      placeholder: days,
+      title: '自定义天数（1-365），回车或失焦生效',
+      onChange: function (e) { setCustomDays(e.target.value); },
+      onKeyDown: function (e) {
+        if (e.key === 'Enter') applyCustomDays();
+      },
+      onBlur: applyCustomDays,
+      disabled: loading
+    }),
+    React.createElement('span', { className: 'lm-days-suffix' }, '天')
+  );
   const refreshEl = React.createElement('button', {
     className: 'lm-refresh',
     onClick: function () { setStamp(stamp + 1); },
@@ -491,7 +525,7 @@ function LingMuFloat() {
     React.createElement('div', { className: 'lm-win-body' },
       view === 'dashboard'
         ? React.createElement('div', null,
-            React.createElement('div', { className: 'lm-row' }, tabsEl, refreshEl),
+            React.createElement('div', { className: 'lm-row' }, tabsEl, customEl, refreshEl),
             bodyEl
           )
         : bodyEl

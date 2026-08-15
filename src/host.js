@@ -29,7 +29,7 @@ async function main() {
     throw new Error('no credentials: set LM_EMAIL/LM_PASSWORD for the DSH process or configure them in the floating window settings');
   }
   var days = parseInt(process.env.LM_DAYS || '1', 10);
-  if (!(days >= 1)) days = 1;
+  if (!(days >= 1) || days > 365) days = 1;
   // Asia/Shanghai is UTC+8, no DST
   var now = new Date();
   var sh = new Date(now.getTime() + 8 * 3600 * 1000);
@@ -141,7 +141,7 @@ return {
         return { ok: false, error: 'shell service unavailable on this host' };
       }
       let days = Math.floor(Number((args && args.days) || 1));
-      if (!(days >= 1) || days > 90) days = 1;
+      if (!(days >= 1) || days > 365) days = 1; // custom ranges up to a year
       // Credentials are forwarded only when the Client supplied them;
       // otherwise the node child falls back to the DSH process environment.
       const env = { LM_DAYS: String(days) };
