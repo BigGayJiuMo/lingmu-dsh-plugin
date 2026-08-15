@@ -182,6 +182,16 @@ function LingMuFloat() {
     setView('dashboard');
     setStamp(stamp + 1);
   }
+  function minimizeToBall() {
+    // Minimizing docks the ball to the nearest horizontal edge immediately,
+    // instead of leaving it at the window's old position until it is dragged.
+    const vw = typeof window !== 'undefined' ? window.innerWidth : 1280;
+    const vh = typeof window !== 'undefined' ? window.innerHeight : 800;
+    const cx = pos.x + 180; // window center (window is 360px wide)
+    const ny = Math.min(Math.max(pos.y, 8), Math.max(8, vh - 46 - 8));
+    setPos({ x: cx < vw / 2 ? 8 : Math.max(8, vw - 46 - 8), y: ny });
+    setMode('ball');
+  }
 
   function onPointerDown(e) {
     // Never start a drag from a press that lands on a button: pointer capture
@@ -284,7 +294,7 @@ function LingMuFloat() {
     React.createElement('button', {
       className: 'lm-ico',
       title: '最小化为悬浮球',
-      onClick: function () { setMode('ball'); }
+      onClick: minimizeToBall
     }, '−')
   );
 
