@@ -1,0 +1,31 @@
+{
+  "name": "lingmu-dsh-plugin",
+  "version": "0.1.0",
+  "description": "LingMu (lmuai.com) relay usage dashboard for DeepSeek Harness: token usage, balance, cache hits and cost by model, with 1d/7d/30d ranges, in a draggable floating window.",
+  "type": "module",
+  "main": "src/host.js",
+  "exports": {
+    "./client": "./src/client.js"
+  },
+  "dsh": {
+    "client": {
+      "platform": "browser"
+    }
+  },
+  "files": [
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "cordis",
+    "lingmu",
+    "lmuai",
+    "usage",
+    "dashboard",
+    "plugin"
+  ],
+  "license": "MIT"
+}
