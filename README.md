@@ -34,7 +34,7 @@
 
 ## 安装
 
-### 方式 2：客户端插件包（推荐，持久）
+### 方式 1：客户端插件包（推荐，持久）
 
 完整步骤见 [INSTALL-dsh.md](./INSTALL-dsh.md)，摘要：
 
@@ -53,7 +53,7 @@
 
 > 要求：DSH 客户端扫描器只拾取 `dsh.client.platform: "web"` 的包（本包已声明）。
 
-### 方式 1：动态插件（进程级，重启后需重新加载）
+### 方式 2：动态插件（进程级，重启后需重新加载）
 
 将 `src/host.js` 与 `src/client.js` 的完整内容分别交给 DSH 的 cordis 动态插件工具（`cordis_define` 的 `code.host` / `code.client`），然后用 `cordis_run` 激活。首次运行需在界面批准。
 
