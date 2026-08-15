@@ -62,7 +62,8 @@ const LM_CSS = `
 .lm-refresh:hover{color:var(--dsw-alias-label-primary)}
 .lm-refresh:disabled{opacity:.5;cursor:default}
 .lm-custom{display:inline-flex;align-items:center;gap:4px}
-.lm-days-input{width:64px;padding:3px 6px;border-radius:8px;font-size:12px;text-align:center}
+.lm-days-input{width:64px;padding:3px 6px;border-radius:999px;border:1px solid var(--dsw-alias-border-l1);background:transparent;color:var(--dsw-alias-label-primary);font-size:12px;text-align:center}
+.lm-days-input:focus{outline:none;border-color:var(--dsw-alias-brand-primary)}
 .lm-days-input:disabled{opacity:.5}
 .lm-days-suffix{font-size:12px;color:var(--dsw-alias-label-secondary);white-space:nowrap}
 .lm-balance{display:flex;align-items:baseline;gap:10px;padding:8px 12px;border-radius:8px;background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l1);margin-bottom:8px}
@@ -131,6 +132,7 @@ function LingMuFloat() {
   const [draftPassword, setDraftPassword] = React.useState('');
   const [days, setDays] = React.useState(1);
   const [customDays, setCustomDays] = React.useState('');
+  const [customOpen, setCustomOpen] = React.useState(false);
   const [data, setData] = React.useState(null);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState(null);
@@ -212,9 +214,10 @@ function LingMuFloat() {
   }
   function applyCustomDays() {
     const n = Math.floor(Number(customDays));
+    setCustomOpen(false);
     if (!(n >= 1) || n > 365) {
       // invalid input: fall back to the currently selected range
-      setCustomDays(String(days));
+      setCustomDays('');
       return;
     }
     setDays(n);
@@ -489,25 +492,46 @@ function LingMuFloat() {
       }, t.label);
     })
   );
-  // custom day-range input: type a number of days and press Enter or blur
-  const customEl = React.createElement('span', { className: 'lm-custom' },
-    React.createElement('input', {
-      className: 'lm-input lm-days-input',
-      type: 'number',
-      min: 1,
-      max: 365,
-      value: customDays,
-      placeholder: days,
-      title: '自定义天数（1-365），回车或失焦生效',
-      onChange: function (e) { setCustomDays(e.target.value); },
-      onKeyDown: function (e) {
-        if (e.key === 'Enter') applyCustomDays();
-      },
-      onBlur: applyCustomDays,
-      disabled: loading
-    }),
-    React.createElement('span', { className: 'lm-days-suffix' }, '天')
-  );
+  // custom day-range: a button that turns into a number input while
+  // open; Enter/blur confirms (button then reads 近X天 and highlights),
+  // Escape cancels back to a plain 自定义 button
+  const isCustomActive = days !== 1 && days !== 7 && days !== 30;
+  const customEl = customOpen
+    ? React.createElement('span', { className: 'lm-custom' },
+        React.createElement('input', {
+          className: 'lm-input lm-days-input',
+          type: 'number',
+          min: 1,
+          max: 365,
+          autoFocus: true,
+          value: customDays,
+          placeholder: String(days),
+          title: '自定义天数（1-365），回车确认，Esc 取消',
+          onChange: function (e) { setCustomDays(e.target.value); },
+          onKeyDown: function (e) {
+            if (e.key === 'Enter') applyCustomDays();
+            else if (e.key === 'Escape') {
+              setCustomOpen(false);
+              setCustomDays('');
+            }
+          },
+          onBlur: function () {
+            if (customDays.trim() !== '') applyCustomDays();
+            else setCustomOpen(false);
+          },
+          disabled: loading
+        }),
+        React.createElement('span', { className: 'lm-days-suffix' }, '天')
+      )
+    : React.createElement('button', {
+        className: 'lm-tab' + (isCustomActive ? ' on' : ''),
+        title: '自定义天数（1-365）',
+        onClick: function () {
+          setCustomDays('');
+          setCustomOpen(true);
+        },
+        disabled: loading
+      }, isCustomActive ? '近' + days + '天' : '自定义');
   const refreshEl = React.createElement('button', {
     className: 'lm-refresh',
     onClick: function () { setStamp(stamp + 1); },
